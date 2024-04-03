@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Distance Calculator</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 1em;
+        background-color: crimson;
+        color: white;
+        font-family: sans-serif;
+      }
+      #map {
+        height: 400px;
+        width: 100%;
+      }
+      form {
+        margin-top: 1em;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Distance Calculator</h1>
+      <h4>Distance: <span id="distance"></span></h4>
+      <h4>Duration: <span id="duration"></span></h4>
+    </header>
+
+    <div id="map"></div>
+
+    <form id="distance-form">
+      <label for="origin">Origin:</label>
+      <input type="text" id="origin" placeholder="Enter origin" />
+      <label for="destination">Destination:</label>
+      <input type="text" id="destination" placeholder="Enter destination" />
+      <label for="mode">Mode:</label>
+      <select id="mode">
+        <option value="driving">Driving</option>
+        <option value="bicycling">Bicycling</option>
+        <option value="transit">Walking</option>
+      </select>
+      <button type="submit">Calculate Distance</button>
+    </form>
+
+    <script>
+      let map;
+      let directionsService;
+      let directionsRenderer;
+
+      function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+          center: { lat: 0, lng: 0 },
+          zoom: 4,
+        });
+        directionsService = new google.maps.DirectionsService();
+        directionsRenderer = new google.maps.DirectionsRenderer();
+        directionsRenderer.setMap(map);
+
+        const originInput = document.getElementById('origin');
+        const destinationInput = document.getElementById('destination');
+        const modeSelect = document.getElementById('mode');
+        const originAutocomplete = new google.maps.places.Autocomplete(
+          originInput
+        );
+        const destinationAutocomplete = new google.maps.places.Autocomplete(
+          destinationInput
+        );
+      }
+
+      async function calculateDistance(e) {
+        e.preventDefault();
+        const origin = document.getElementById('origin').value;
+        const destination = document.getElementById('destination').value;
+        const mode = document.getElementById('mode').value;
+
+        const response = await fetch('/api/distances', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ origin, destination, mode }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          return window.alert('Error calculating distance. Please try again.');
+        }
+
+        displayRoute(origin, destination, mode);
+        document.getElementById('distance').innerHTML = data.distance;
+        document.getElementById('duration').innerHTML = data.duration;
+      }
+
+      function displayRoute(origin, destination, mode) {
+        directionsService.route(
+          {
+            origin: origin,
+            destination: destination,
+            travelMode: mode.toUpperCase(),
+          },
+          (response, status) => {
+            if (status === 'OK') {
+              directionsRenderer.setDirections(response);
+            } else {
+              window.alert('Directions request failed due to ' + status);
+            }
+          }
+        );
+      }
+
+      document
+        .getElementById('distance-form')
+        .addEventListener('submit', calculateDistance);
+    </script>
+    <script
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA9G4sEmEPuNIu0Ap5ZYGWYqhLo8ldIKbs&libraries=places&callback=initMap"
+      async
+      defer
+    ></script>
+  </body>
+</html>
